@@ -1,3 +1,6 @@
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import express from 'express';
 import {config} from './config.js';
 import {createApi} from './api/createApi.js';
 import {searchService} from './services/searchService.js';
@@ -11,6 +14,9 @@ import {createLogger} from './utils/logger.js';
 import './storage/database.js';
 
 const logger = createLogger('server');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.join(__dirname, '../dist');
 
 const scheduler = new MonitorScheduler({
   searchRepository,
@@ -26,11 +32,22 @@ const scheduler = new MonitorScheduler({
 const statusService = createStatusService(scheduler);
 const app = createApi({searchService, itemService, statusService});
 
+app.use(express.static(distPath));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    next();
+    return;
+  }
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 scheduler.start();
 
-const server = app.listen(config.port, '0.0.0.0', () => {
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info('API started', {
-    url: `http://0.0.0.0:${config.port}`,
+    url: `http://0.0.0.0:${PORT}`,
     scrapeIntervalSeconds: config.scrapeIntervalSeconds,
     maxItemsPerSearch: config.maxItemsPerSearch,
   });
