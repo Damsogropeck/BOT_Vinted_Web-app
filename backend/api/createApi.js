@@ -23,8 +23,12 @@ export function createApi({searchService, itemService, statusService}) {
     next();
   });
 
+  app.get('/', (_req, res) => {
+    res.send('Bot running');
+  });
+
   app.get('/health', (_req, res) => {
-    res.json({ok: true, timestamp: new Date().toISOString()});
+    res.json({status: 'ok'});
   });
 
   app.use('/api/searches', createSearchRoutes(searchService));

@@ -26,7 +26,7 @@ const scraperMaxDelayMs = Math.max(scraperMinDelayMs, toInt(process.env.SCRAPER_
 
 export const config = {
   projectRoot,
-  port: toInt(process.env.BACKEND_PORT, 3001),
+  port: toInt(process.env.PORT ?? process.env.BACKEND_PORT, 3001),
   dbPath: path.resolve(projectRoot, process.env.DB_PATH ?? 'backend/storage/vinted-bot.db'),
   scrapeIntervalSeconds: toInt(process.env.SCRAPE_INTERVAL_SECONDS, 45),
   scraperDelayMs: toInt(process.env.SCRAPER_DELAY_MS, 1200),

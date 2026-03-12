@@ -28,9 +28,9 @@ const app = createApi({searchService, itemService, statusService});
 
 scheduler.start();
 
-const server = app.listen(config.port, () => {
+const server = app.listen(config.port, '0.0.0.0', () => {
   logger.info('API started', {
-    url: `http://localhost:${config.port}`,
+    url: `http://0.0.0.0:${config.port}`,
     scrapeIntervalSeconds: config.scrapeIntervalSeconds,
     maxItemsPerSearch: config.maxItemsPerSearch,
   });
