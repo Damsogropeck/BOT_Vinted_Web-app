@@ -1,0 +1,5 @@
+{
+  "name": "Vinted Bot UI",
+  "description": "Frontend interface for a Vinted bot, allowing users to manage searches and view new items.",
+  "requestFramePermissions": []
+}
