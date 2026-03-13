@@ -44,7 +44,7 @@ app.get('*', (req, res, next) => {
 
 scheduler.start();
 
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info('API started', {
     url: `http://0.0.0.0:${PORT}`,

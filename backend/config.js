@@ -2,11 +2,14 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import dotenv from 'dotenv';
 
-dotenv.config({quiet: true});
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
+
+const isProduction = String(process.env.NODE_ENV ?? '').toLowerCase() === 'production';
+if (!isProduction) {
+  dotenv.config({quiet: true});
+}
 
 function toInt(value, fallback) {
   const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -26,7 +29,7 @@ const scraperMaxDelayMs = Math.max(scraperMinDelayMs, toInt(process.env.SCRAPER_
 
 export const config = {
   projectRoot,
-  port: toInt(process.env.PORT ?? process.env.BACKEND_PORT, 3001),
+  port: toInt(process.env.PORT ?? process.env.BACKEND_PORT, 3000),
   dbPath: path.resolve(projectRoot, process.env.DB_PATH ?? 'backend/storage/vinted-bot.db'),
   scrapeIntervalSeconds: toInt(process.env.SCRAPE_INTERVAL_SECONDS, 45),
   scraperDelayMs: toInt(process.env.SCRAPER_DELAY_MS, 1200),

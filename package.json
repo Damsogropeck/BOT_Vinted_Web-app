@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "nodemon backend/server.js",
     "dev:client": "vite --port=3000 --host=0.0.0.0",
-    "dev:server": "tsx watch backend/server.js",
+    "dev:server": "nodemon backend/server.js",
     "start:server": "node backend/server.js",
     "build": "vite build",
     "preview": "vite preview",
@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "nodemon": "^3.1.9",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
