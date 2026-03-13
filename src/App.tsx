@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {User, Plus, Search, ExternalLink, Activity, Pin, MoreVertical} from 'lucide-react';
+import {User, Plus, Search, ExternalLink, Activity, Pin, MoreVertical, Edit2, Trash2, Check} from 'lucide-react';
 import {api, type ItemRecord, type SearchRecord, type StatusRecord} from './services/api';
 
 const POLLING_INTERVAL_MS = 8000;
@@ -55,6 +55,9 @@ export default function App() {
   const [items, setItems] = useState<UiItem[]>([]);
   const [status, setStatus] = useState<StatusRecord | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{id: number; name: string} | null>(null);
+  const [editingName, setEditingName] = useState('');
 
   const [newSearchUrl, setNewSearchUrl] = useState('');
   const [newSearchLabel, setNewSearchLabel] = useState('');
@@ -105,6 +108,29 @@ export default function App() {
       window.clearInterval(interval);
     };
   }, [loadData]);
+
+  useEffect(() => {
+    if (openMenuId == null) {
+      return;
+    }
+
+    const handleClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Node)) {
+        return;
+      }
+
+      const isInsideMenu = event.target.closest('[data-menu-root="true"]');
+      const isMenuButton = event.target.closest('[data-menu-button="true"]');
+      if (!isInsideMenu && !isMenuButton) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => {
+      document.removeEventListener('click', handleClick);
+    };
+  }, [openMenuId]);
 
   useEffect(() => {
     if (selectedCategoryId == null) {
@@ -194,14 +220,48 @@ export default function App() {
 
       try {
         await api.deleteSearch(id);
-        await loadData(false);
+        setSearches((current) => current.filter((entry) => entry.id !== id));
+        if (selectedCategoryId === id) {
+          setSelectedCategoryId(null);
+        }
+        setOpenMenuId(null);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Impossible de supprimer la recherche');
       } finally {
         setBusySearchId(null);
       }
     },
-    [loadData],
+    [selectedCategoryId],
+  );
+
+  const handleRenameCategory = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!editingCategory) {
+        return;
+      }
+
+      const nextName = editingName.trim();
+      if (!nextName) {
+        setErrorMessage('Le nom de la recherche est requis');
+        return;
+      }
+
+      setBusySearchId(editingCategory.id);
+
+      try {
+        await api.updateSearch(editingCategory.id, {label: nextName});
+        setSearches((current) =>
+          current.map((entry) => (entry.id === editingCategory.id ? {...entry, label: nextName} : entry)),
+        );
+        setEditingCategory(null);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'Impossible de renommer la recherche');
+      } finally {
+        setBusySearchId(null);
+      }
+    },
+    [editingCategory, editingName],
   );
 
   const sortedCategories = useMemo(() => {
@@ -307,11 +367,11 @@ export default function App() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <aside className="w-full lg:w-64 flex-shrink-0">
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden sticky top-24 shadow-xl">
+            <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-visible sticky top-24 shadow-xl">
               <div className="p-4 border-b border-white/10 bg-white/5">
                 <h3 className="text-xs font-display font-bold text-zinc-300 uppercase tracking-widest">Recherches actives</h3>
               </div>
-              <ul className="divide-y divide-white/5">
+              <ul className="divide-y divide-white/5 overflow-visible">
                 {sortedCategories.map((category) => (
                   <li
                     key={category.id}
@@ -326,17 +386,58 @@ export default function App() {
                   >
                     <div className="flex justify-between items-start">
                       <div className="font-display font-semibold text-zinc-100 truncate pr-4">{category.label}</div>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void deleteCategory(category.id, category.label);
-                        }}
-                        disabled={busySearchId === category.id}
-                        className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded-md hover:bg-white/10 opacity-0 group-hover:opacity-100 -mt-1 -mr-1 disabled:opacity-40"
-                        title="Supprimer la recherche"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                      <div className="relative -mt-1 -mr-1">
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenMenuId((current) => (current === category.id ? null : category.id));
+                          }}
+                          disabled={busySearchId === category.id}
+                          data-menu-button="true"
+                          className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded-md hover:bg-white/10 disabled:opacity-40"
+                          title="Actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {openMenuId === category.id && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-40"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setOpenMenuId(null);
+                              }}
+                            />
+                            <div
+                              data-menu-root="true"
+                              className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-[#18181b] shadow-2xl z-50 animate-in fade-in"
+                            >
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setEditingCategory({id: category.id, name: category.label});
+                                  setEditingName(category.label);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-zinc-200 hover:text-white hover:bg-white/5 transition-colors rounded-t-xl"
+                              >
+                                <Edit2 className="w-4 h-4 text-zinc-400" />
+                                Renommer
+                              </button>
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void deleteCategory(category.id, category.label);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors rounded-b-xl"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Supprimer
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-end justify-between">
                       <div className="text-xs text-zinc-400 flex items-center gap-1">
@@ -466,6 +567,50 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {editingCategory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setEditingCategory(null)}
+        >
+          <form
+            onSubmit={handleRenameCategory}
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-md bg-[#0f0f12] border border-white/10 rounded-2xl p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-display font-semibold text-zinc-100 mb-4">Renommer la recherche</h3>
+            <label htmlFor="rename-category" className="block text-sm font-medium text-zinc-400 mb-2">
+              Nom de la catégorie
+            </label>
+            <input
+              id="rename-category"
+              type="text"
+              autoFocus
+              value={editingName}
+              onChange={(event) => setEditingName(event.target.value)}
+              className="w-full px-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder-zinc-600 focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-all shadow-inner"
+              placeholder="Ex: Sneakers Nike"
+            />
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingCategory(null)}
+                className="px-4 py-2 rounded-xl text-sm font-display font-semibold text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={busySearchId === editingCategory.id}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-display font-semibold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 transition-colors shadow-[0_0_20px_rgba(168,85,247,0.35)] disabled:opacity-60"
+              >
+                <Check className="w-4 h-4" />
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
