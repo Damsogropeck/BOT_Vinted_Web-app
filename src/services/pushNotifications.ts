@@ -6,6 +6,10 @@ function isStandaloneMode() {
   return Boolean(isStandaloneMatch || isIosStandalone);
 }
 
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+}
+
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -31,7 +35,7 @@ export async function subscribeUserToPush(searchId: number) {
   if (!('Notification' in window)) {
     throw new Error('Notifications non supportées sur ce navigateur.');
   }
-  if (!isStandaloneMode()) {
+  if (isIosDevice() && !isStandaloneMode()) {
     throw new Error('Sur iOS, les notifications Web Push ne fonctionnent que depuis l’app ajoutée à l’écran d’accueil.');
   }
 
