@@ -1,5 +1,9 @@
 import {Router} from 'express';
 import {pushSubscriptionRepository} from '../../storage/pushSubscriptionRepository.js';
+import {sendPushNotification} from '../../services/pushService.js';
+import {createLogger} from '../../utils/logger.js';
+
+const logger = createLogger('api.push');
 
 export function createPushRoutes() {
   const router = Router();
@@ -23,6 +27,12 @@ export function createPushRoutes() {
 
     pushSubscriptionRepository.setSearchPreference(subscription.endpoint, Number(searchId), Boolean(enabled));
 
+    logger.info('Push subscribed', {
+      endpoint: subscription.endpoint,
+      searchId: Number(searchId),
+      enabled: Boolean(enabled),
+    });
+
     res.status(201).json({status: 'ok'});
   });
 
@@ -34,10 +44,49 @@ export function createPushRoutes() {
     }
     if (searchId && Number.isFinite(Number(searchId))) {
       pushSubscriptionRepository.setSearchPreference(endpoint, Number(searchId), false);
+      logger.info('Push unsubscribed from search', {endpoint, searchId: Number(searchId)});
     } else {
       pushSubscriptionRepository.deleteByEndpoint(endpoint);
+      logger.info('Push unsubscribed (global)', {endpoint});
     }
     res.status(200).json({status: 'ok'});
+  });
+
+  router.post('/push/test', async (req, res) => {
+    const {searchId} = req.body ?? {};
+    const subscriptions =
+      searchId && Number.isFinite(Number(searchId))
+        ? pushSubscriptionRepository.listBySearchId(Number(searchId))
+        : pushSubscriptionRepository.listAll();
+
+    if (subscriptions.length === 0) {
+      res.status(404).json({error: 'Aucune subscription enregistrée.'});
+      return;
+    }
+
+    const payload = {
+      title: 'Test Notification',
+      body: 'Ceci est une notification de test.',
+      url: '/',
+      icon: '/icon-192.png',
+    };
+
+    const results = await Promise.allSettled(
+      subscriptions.map((sub) => sendPushNotification(sub.subscription, payload)),
+    );
+
+    const failed = results.filter((result) => result.status === 'rejected');
+    if (failed.length > 0) {
+      logger.warn('Push test failed for some subscriptions', {failed: failed.length});
+    } else {
+      logger.info('Push test delivered', {count: subscriptions.length});
+    }
+
+    res.status(200).json({
+      status: 'ok',
+      sent: subscriptions.length,
+      failed: failed.length,
+    });
   });
 
   return router;
