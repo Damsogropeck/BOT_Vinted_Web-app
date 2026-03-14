@@ -104,6 +104,7 @@ export class MonitorScheduler {
           });
 
           const now = nowIso();
+          const previousLastCheckAt = search.lastCheckAt;
           let inserted = 0;
 
           if (!search.lastCheckAt) {
@@ -128,12 +129,26 @@ export class MonitorScheduler {
           });
 
           if (inserted > 0) {
-            const newItems = this.itemRepository.listBySearchAndDetectedAt(search.id, now);
+            const since = previousLastCheckAt ?? now;
+            const newItems = this.itemRepository.listBySearchSince(search.id, since);
             const subscriptions = pushSubscriptionRepository.listBySearchId(search.id);
 
             if (subscriptions.length === 0) {
               logger.debug('No push subscriptions for search; skip notifications', {searchId: search.id});
             } else {
+              logger.info('Sending push notifications', {
+                searchId: search.id,
+                items: newItems.length,
+                subscriptions: subscriptions.length,
+              });
+
+              if (newItems.length === 0) {
+                logger.warn('No new items found for push dispatch despite inserted > 0', {
+                  searchId: search.id,
+                  inserted,
+                });
+              }
+
               for (const item of newItems) {
                 const payload = {
                   title: `Nouveau ${search.label}`,
@@ -143,9 +158,18 @@ export class MonitorScheduler {
                   image: item.imageUrl || undefined,
                 };
 
-                await Promise.allSettled(
+                const results = await Promise.allSettled(
                   subscriptions.map((sub) => sendPushNotification(sub.subscription, payload)),
                 );
+
+                const failed = results.filter((result) => result.status === 'rejected');
+                if (failed.length > 0) {
+                  logger.warn('Push delivery failed for some subscriptions', {
+                    searchId: search.id,
+                    failed: failed.length,
+                    total: results.length,
+                  });
+                }
               }
             }
           }

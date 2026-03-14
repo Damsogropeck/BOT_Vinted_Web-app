@@ -89,5 +89,17 @@ export function createPushRoutes() {
     });
   });
 
+  router.get('/push/diagnostic', (req, res) => {
+    const searchId = Number(req.query.searchId);
+    const total = pushSubscriptionRepository.listAll().length;
+    const bySearch = Number.isFinite(searchId) ? pushSubscriptionRepository.listBySearchId(searchId).length : null;
+
+    res.status(200).json({
+      status: 'ok',
+      subscriptionsTotal: total,
+      subscriptionsForSearch: bySearch,
+    });
+  });
+
   return router;
 }
