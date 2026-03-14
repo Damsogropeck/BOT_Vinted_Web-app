@@ -180,6 +180,24 @@ LIMIT ?
 `);
 
 const countStmt = db.prepare('SELECT COUNT(*) AS total FROM items');
+const listBySearchAndDetectedAtStmt = db.prepare(`
+SELECT
+  i.item_id,
+  i.search_id,
+  i.title,
+  i.price,
+  i.brand,
+  i.size,
+  i.condition,
+  i.image_url,
+  i.item_url,
+  i.detected_at,
+  s.label AS search_label
+FROM items i
+LEFT JOIN searches s ON s.id = i.search_id
+WHERE i.search_id = ? AND i.detected_at = ?
+ORDER BY i.id ASC
+`);
 
 export const itemRepository = {
   insertNewItems(searchId, items, detectedAt) {
@@ -200,6 +218,10 @@ export const itemRepository = {
 
   listRecent(limit = 30) {
     return listRecentStmt.all(limit).map(mapItemRow);
+  },
+
+  listBySearchAndDetectedAt(searchId, detectedAt) {
+    return listBySearchAndDetectedAtStmt.all(searchId, detectedAt).map(mapItemRow);
   },
 
   countAll() {
