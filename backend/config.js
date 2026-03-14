@@ -43,4 +43,7 @@ export const config = {
   httpRetryBaseDelayMs: toInt(process.env.HTTP_RETRY_BASE_DELAY_MS, 350),
   logLevel: toLogLevel(process.env.LOG_LEVEL),
   enableDetailEnrichment: String(process.env.ENABLE_DETAIL_ENRICHMENT ?? 'false').toLowerCase() === 'true',
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
+  vapidSubject: process.env.VAPID_SUBJECT,
 };

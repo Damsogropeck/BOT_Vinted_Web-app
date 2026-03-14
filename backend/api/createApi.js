@@ -2,6 +2,7 @@ import express from 'express';
 import {createSearchRoutes} from './routes/searchRoutes.js';
 import {createItemRoutes} from './routes/itemRoutes.js';
 import {createStatusRoutes} from './routes/statusRoutes.js';
+import {createPushRoutes} from './routes/pushRoutes.js';
 import {toHttpError} from '../utils/errors.js';
 import {createLogger} from '../utils/logger.js';
 
@@ -30,6 +31,7 @@ export function createApi({searchService, itemService, statusService}) {
   app.use('/api/searches', createSearchRoutes(searchService));
   app.use('/api/items', createItemRoutes(itemService));
   app.use('/api/status', createStatusRoutes(statusService));
+  app.use('/api', createPushRoutes());
 
   app.use((error, _req, res, _next) => {
     const httpError = toHttpError(error);

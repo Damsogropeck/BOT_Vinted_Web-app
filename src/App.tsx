@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {User, Plus, Search, ExternalLink, Activity, Pin, MoreVertical, Edit2, Trash2, Check} from 'lucide-react';
+import {User, Plus, Search, ExternalLink, Activity, Pin, MoreVertical, Edit2, Trash2, Check, Bell, BellOff} from 'lucide-react';
 import {api, type ItemRecord, type SearchRecord, type StatusRecord} from './services/api';
+import {subscribeUserToPush, unsubscribeUserFromPush} from './services/pushNotifications';
 
 const POLLING_INTERVAL_MS = 8000;
 
@@ -50,8 +51,12 @@ type UiItem = ItemRecord & {
   categoryId: number;
 };
 
+type UiSearch = SearchRecord & {
+  notifications: boolean;
+};
+
 export default function App() {
-  const [searches, setSearches] = useState<SearchRecord[]>([]);
+  const [searches, setSearches] = useState<UiSearch[]>([]);
   const [items, setItems] = useState<UiItem[]>([]);
   const [status, setStatus] = useState<StatusRecord | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -79,7 +84,13 @@ export default function App() {
         api.getStatus(),
       ]);
 
-      setSearches(searchesResponse);
+      setSearches((current) => {
+        const existingNotifications = new Map(current.map((entry) => [entry.id, entry.notifications]));
+        return searchesResponse.map((entry) => ({
+          ...entry,
+          notifications: existingNotifications.get(entry.id) ?? true,
+        }));
+      });
       setItems(
         itemsResponse.map((item) => ({
           ...item,
@@ -286,6 +297,40 @@ export default function App() {
     return items.filter((item) => item.categoryId === selectedCategoryId);
   }, [items, selectedCategoryId]);
 
+  const toggleNotifications = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>, id: number) => {
+      event.stopPropagation();
+      const current = searches.find((entry) => entry.id === id);
+      if (!current) {
+        return;
+      }
+      const nextValue = !current.notifications;
+
+      setSearches((entries) =>
+        entries.map((entry) =>
+          entry.id === id ? {...entry, notifications: nextValue} : entry,
+        ),
+      );
+
+      try {
+        if (nextValue) {
+          await subscribeUserToPush();
+        } else {
+          await unsubscribeUserFromPush();
+        }
+        setErrorMessage(null);
+      } catch (error) {
+        setSearches((entries) =>
+          entries.map((entry) =>
+            entry.id === id ? {...entry, notifications: !nextValue} : entry,
+          ),
+        );
+        setErrorMessage(error instanceof Error ? error.message : 'Notifications impossibles à activer');
+      }
+    },
+    [searches],
+  );
+
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-zinc-100 selection:bg-fuchsia-500/30 relative overflow-hidden">
       {/* Ambient Background Glows */}
@@ -385,7 +430,24 @@ export default function App() {
                     }`}
                   >
                     <div className="flex justify-between items-start">
-                      <div className="font-display font-semibold text-zinc-100 truncate pr-4">{category.label}</div>
+                      <div className="flex items-center gap-2 min-w-0 pr-4">
+                        <span className="font-display font-semibold text-zinc-100 truncate">{category.label}</span>
+                        <button
+                          onClick={(event) => toggleNotifications(event, category.id)}
+                          className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${
+                            category.notifications
+                              ? ''
+                              : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+                          }`}
+                          title={category.notifications ? 'Désactiver les alertes' : 'Activer les alertes'}
+                        >
+                          {category.notifications ? (
+                            <Bell className="w-4 h-4 text-amber-400 fill-amber-400/20 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]" />
+                          ) : (
+                            <BellOff className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
                       <div className="relative -mt-1 -mr-1">
                         <button
                           onClick={(event) => {

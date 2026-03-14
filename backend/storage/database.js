@@ -50,9 +50,19 @@ CREATE TABLE IF NOT EXISTS seen_items (
   FOREIGN KEY(search_id) REFERENCES searches(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  endpoint TEXT NOT NULL UNIQUE,
+  subscription_json TEXT NOT NULL,
+  user_agent TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_detected_at ON items(detected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_items_search_id ON items(search_id);
 CREATE INDEX IF NOT EXISTS idx_seen_items_search_id ON seen_items(search_id);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_updated_at ON push_subscriptions(updated_at DESC);
 `);
 
 db.exec(`
