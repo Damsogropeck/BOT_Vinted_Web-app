@@ -24,7 +24,7 @@ export async function registerServiceWorker() {
   return navigator.serviceWorker.register('/sw.js');
 }
 
-export async function subscribeUserToPush() {
+export async function subscribeUserToPush(searchId: number) {
   if (!VAPID_PUBLIC_KEY) {
     throw new Error('Clé VAPID publique manquante (VITE_VAPID_PUBLIC_KEY).');
   }
@@ -41,15 +41,18 @@ export async function subscribeUserToPush() {
     throw new Error('Permission de notifications refusée.');
   }
 
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  });
+  const existing = await registration.pushManager.getSubscription();
+  const subscription =
+    existing ??
+    (await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    }));
 
   const response = await fetch('/api/subscribe', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(subscription),
+    body: JSON.stringify({subscription, searchId, enabled: true}),
   });
 
   if (!response.ok) {
@@ -59,7 +62,7 @@ export async function subscribeUserToPush() {
   return subscription;
 }
 
-export async function unsubscribeUserFromPush() {
+export async function unsubscribeUserFromPush(searchId: number) {
   if (!('serviceWorker' in navigator)) {
     return;
   }
@@ -71,10 +74,9 @@ export async function unsubscribeUserFromPush() {
   if (!subscription) {
     return;
   }
-  await subscription.unsubscribe();
   await fetch('/api/unsubscribe', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({endpoint: subscription.endpoint}),
+    body: JSON.stringify({endpoint: subscription.endpoint, searchId}),
   });
 }

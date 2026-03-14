@@ -314,9 +314,9 @@ export default function App() {
 
       try {
         if (nextValue) {
-          await subscribeUserToPush();
+          await subscribeUserToPush(id);
         } else {
-          await unsubscribeUserFromPush();
+          await unsubscribeUserFromPush(id);
         }
         setErrorMessage(null);
       } catch (error) {

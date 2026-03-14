@@ -59,10 +59,23 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS push_subscription_searches (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subscription_id INTEGER NOT NULL,
+  search_id INTEGER NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(subscription_id, search_id),
+  FOREIGN KEY(subscription_id) REFERENCES push_subscriptions(id) ON DELETE CASCADE,
+  FOREIGN KEY(search_id) REFERENCES searches(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_detected_at ON items(detected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_items_search_id ON items(search_id);
 CREATE INDEX IF NOT EXISTS idx_seen_items_search_id ON seen_items(search_id);
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_updated_at ON push_subscriptions(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_push_subscription_searches_search_id ON push_subscription_searches(search_id);
 `);
 
 db.exec(`
