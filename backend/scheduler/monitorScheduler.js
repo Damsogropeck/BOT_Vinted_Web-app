@@ -2,8 +2,6 @@ import {nowIso} from '../utils/time.js';
 import {sleepRandom} from '../utils/http.js';
 import {createLogger} from '../utils/logger.js';
 import {normalizeVintedUrl} from '../utils/url.js';
-import {pushSubscriptionRepository} from '../storage/pushSubscriptionRepository.js';
-import {sendPushNotification} from '../services/pushService.js';
 
 const logger = createLogger('scheduler.monitor');
 
@@ -126,29 +124,6 @@ export class MonitorScheduler {
             scraped: scrapedItems.length,
             inserted,
           });
-
-          if (inserted > 0) {
-            const newItems = this.itemRepository.listBySearchAndDetectedAt(search.id, now);
-            const subscriptions = pushSubscriptionRepository.listAll();
-
-            if (subscriptions.length === 0) {
-              logger.debug('No push subscriptions available; skip notifications', {searchId: search.id});
-            } else {
-              for (const item of newItems) {
-                const payload = {
-                  title: `Nouveau ${search.label}`,
-                  body: `${item.title} - ${item.price || 'Prix inconnu'}`,
-                  url: item.itemUrl,
-                  icon: item.imageUrl || '/icon-192.png',
-                  image: item.imageUrl || undefined,
-                };
-
-                await Promise.allSettled(
-                  subscriptions.map((sub) => sendPushNotification(sub.subscription, payload)),
-                );
-              }
-            }
-          }
         } catch (error) {
           cycleError = `Search ${search.id}: ${error.message}`;
           logger.warn('Search cycle failed', {
