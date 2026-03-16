@@ -4,6 +4,37 @@ import {api, type ItemRecord, type SearchRecord, type StatusRecord} from './serv
 import {subscribeUserToPush, unsubscribeUserFromPush} from './services/pushNotifications';
 
 const POLLING_INTERVAL_MS = 8000;
+const NOTIFICATIONS_STORAGE_KEY = 'vintedbot.notifications';
+
+type StoredNotifications = Record<string, boolean>;
+
+function readStoredNotifications(): StoredNotifications {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+  try {
+    const raw = window.localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') {
+      return {};
+    }
+    return parsed as StoredNotifications;
+  } catch {
+    return {};
+  }
+}
+
+function writeStoredNotification(id: number, value: boolean) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const current = readStoredNotifications();
+  current[String(id)] = value;
+  window.localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(current));
+}
 
 function formatRelativeTime(isoDate: string) {
   const parsed = new Date(isoDate);
@@ -78,6 +109,7 @@ export default function App() {
     }
 
     try {
+      const storedNotifications = readStoredNotifications();
       const [searchesResponse, itemsResponse, statusResponse] = await Promise.all([
         api.listSearches(),
         api.listItems(30),
@@ -88,7 +120,7 @@ export default function App() {
         const existingNotifications = new Map(current.map((entry) => [entry.id, entry.notifications]));
         return searchesResponse.map((entry) => ({
           ...entry,
-          notifications: existingNotifications.get(entry.id) ?? true,
+          notifications: existingNotifications.get(entry.id) ?? storedNotifications[String(entry.id)] ?? false,
         }));
       });
       setItems(
@@ -318,6 +350,7 @@ export default function App() {
         } else {
           await unsubscribeUserFromPush(id);
         }
+        writeStoredNotification(id, nextValue);
         setErrorMessage(null);
       } catch (error) {
         setSearches((entries) =>
@@ -423,10 +456,10 @@ export default function App() {
                     onClick={() => {
                       setSelectedCategoryId((current) => (current === category.id ? null : category.id));
                     }}
-                    className={`relative p-4 border-l-2 transition-colors flex flex-col gap-3 group cursor-pointer ${
+                    className={`relative p-4 transition-colors flex flex-col gap-3 group cursor-pointer before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-violet-500 before:transition-opacity ${
                       selectedCategoryId === category.id
-                        ? 'border-l-violet-500 bg-white/5'
-                        : 'border-l-transparent hover:bg-white/5'
+                        ? 'bg-white/5 before:opacity-100'
+                        : 'hover:bg-white/5 before:opacity-0 group-hover:before:opacity-40'
                     }`}
                   >
                     <div className="flex justify-between items-start">
