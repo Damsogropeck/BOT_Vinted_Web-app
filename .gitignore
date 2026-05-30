@@ -5,6 +5,7 @@ backend/storage/*.db-shm
 backend/storage/*.db-wal
 .env
 .env.*
+!.env.example
 *.log
 .DS_Store
 Capture*
