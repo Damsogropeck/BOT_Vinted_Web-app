@@ -46,4 +46,10 @@ export const config = {
   vapidPublicKey: process.env.VAPID_PUBLIC_KEY,
   vapidPrivateKey: process.env.VAPID_PRIVATE_KEY,
   vapidSubject: process.env.VAPID_SUBJECT,
+  // Sécurité et limites
+  allowedOrigin: process.env.ALLOWED_ORIGIN ?? null,
+  apiToken: process.env.API_TOKEN || null,
+  // Nettoyage automatique de la base de données
+  maxItemAgeDays: toInt(process.env.MAX_ITEM_AGE_DAYS, 30),
+  cleanupIntervalHours: toInt(process.env.CLEANUP_INTERVAL_HOURS, 24),
 };

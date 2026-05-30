@@ -49,13 +49,19 @@ type ApiResponse<T> = {
   data: T;
 };
 
+const API_TOKEN = import.meta.env.VITE_API_TOKEN as string | undefined;
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = ((init?.method ?? 'GET') as string).toUpperCase();
+  const isMutation = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+
   const response = await fetch(path, {
+    ...init,
     headers: {
       'Content-Type': 'application/json',
+      ...(isMutation && API_TOKEN ? {'Authorization': `Bearer ${API_TOKEN}`} : {}),
       ...(init?.headers ?? {}),
     },
-    ...init,
   });
 
   if (!response.ok) {

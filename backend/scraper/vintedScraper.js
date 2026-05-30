@@ -24,14 +24,25 @@ function safeJsonParse(raw) {
   }
 }
 
+const NAMED_HTML_ENTITIES = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+  '&#39;': "'",
+  '&nbsp;': ' ',
+};
+
 function decodeHtmlEntities(raw) {
-  return String(raw ?? '')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ');
+  return String(raw ?? '').replace(
+    /&#(\d+);|&#x([0-9a-f]+);|&([a-z#0-9]+);/gi,
+    (match, dec, hex, name) => {
+      if (dec) return String.fromCharCode(Number(dec));
+      if (hex) return String.fromCharCode(Number.parseInt(hex, 16));
+      return NAMED_HTML_ENTITIES[`&${name};`] ?? match;
+    },
+  );
 }
 
 function extractBalancedJson(source, startIndex) {

@@ -61,14 +61,6 @@ function formatRelativeTime(isoDate: string) {
   return rtf.format(Math.round(diffMs / 86_400_000), 'day');
 }
 
-function inferBrand(label: string) {
-  const words = label.trim().split(/\s+/).filter(Boolean);
-  if (words.length <= 1) {
-    return 'N/A';
-  }
-
-  return words[words.length - 1];
-}
 
 function formatPrice(price: string) {
   if (!price || !price.trim()) {
@@ -158,7 +150,7 @@ export default function App() {
     }
 
     const handleClick = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) {
+      if (!(event.target instanceof Element)) {
         return;
       }
 
@@ -539,9 +531,6 @@ export default function App() {
                       </div>
                     </div>
                     <div className="flex items-end justify-between">
-                      <div className="text-xs text-zinc-400 flex items-center gap-1">
-                        <span className="font-medium text-zinc-500">Marque:</span> <span className="truncate">{inferBrand(category.label)}</span>
-                      </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={(event) => {

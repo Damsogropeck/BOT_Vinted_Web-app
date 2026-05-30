@@ -4,6 +4,7 @@ import {createLogger} from '../utils/logger.js';
 import {normalizeVintedUrl} from '../utils/url.js';
 import {pushSubscriptionRepository} from '../storage/pushSubscriptionRepository.js';
 import {sendPushNotification} from '../services/pushService.js';
+import {config} from '../config.js';
 
 const logger = createLogger('scheduler.monitor');
 
@@ -28,6 +29,7 @@ export class MonitorScheduler {
     this.maxItemsPerSearch = maxItemsPerSearch;
 
     this.timer = null;
+    this.cleanupTimer = null;
     this.running = false;
     this.state = {
       startedAt: null,
@@ -38,6 +40,17 @@ export class MonitorScheduler {
       totalNewItemsDetected: 0,
       lastError: null,
     };
+  }
+
+  runCleanup() {
+    try {
+      const deleted = this.itemRepository.deleteOlderThan(config.maxItemAgeDays);
+      if (deleted > 0) {
+        logger.info('Old items cleaned up', {deleted, maxAgeDays: config.maxItemAgeDays});
+      }
+    } catch (error) {
+      logger.warn('Cleanup failed', {error: error.message});
+    }
   }
 
   start() {
@@ -63,14 +76,24 @@ export class MonitorScheduler {
         logger.error('Scheduler cycle crashed', {error: error.message});
       });
     }, this.intervalMs);
+
+    this.runCleanup();
+    this.cleanupTimer = setInterval(
+      () => this.runCleanup(),
+      config.cleanupIntervalHours * 60 * 60 * 1000,
+    );
   }
 
   stop() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
-      logger.info('Scheduler stopped');
     }
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+    logger.info('Scheduler stopped');
   }
 
   async runCycle() {

@@ -220,6 +220,11 @@ ORDER BY i.id ASC
 const countStmt = db.prepare('SELECT COUNT(*) AS total FROM items');
 
 export const itemRepository = {
+  deleteOlderThan(days) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    return db.prepare('DELETE FROM items WHERE detected_at < ?').run(cutoff).changes;
+  },
+
   insertNewItems(searchId, items, detectedAt) {
     if (!items.length) {
       return 0;

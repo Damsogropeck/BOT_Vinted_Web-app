@@ -25,13 +25,22 @@ export function createItemDedupKey(item) {
     };
   }
 
+  // Fallback sur l'URL normalisée — correspond au format de la migration seen_items
+  if (normalizedItemUrl) {
+    return {
+      itemKey: `url:${normalizedItemUrl.toLowerCase()}`,
+      normalizedItemUrl,
+      canonicalItemId: `url-${hashText(normalizedItemUrl).slice(0, 12)}`,
+    };
+  }
+
+  // Dernier recours : empreinte de plusieurs champs
   const signature = [
     normalizedItemUrl,
     normalizeText(item.title),
     normalizeText(item.price),
     normalizeText(item.brand),
   ].join('|');
-
   const fallback = hashText(signature || JSON.stringify(item));
 
   return {

@@ -5,7 +5,7 @@ import {createLogger} from '../../utils/logger.js';
 
 const logger = createLogger('api.push');
 
-export function createPushRoutes() {
+export function createPushRoutes({pushTestLimiter} = {}) {
   const router = Router();
 
   router.post('/subscribe', (req, res) => {
@@ -52,7 +52,7 @@ export function createPushRoutes() {
     res.status(200).json({status: 'ok'});
   });
 
-  router.post('/push/test', async (req, res) => {
+  router.post('/push/test', ...(pushTestLimiter ? [pushTestLimiter] : []), async (req, res) => {
     const {searchId} = req.body ?? {};
     const subscriptions =
       searchId && Number.isFinite(Number(searchId))
