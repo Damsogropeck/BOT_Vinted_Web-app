@@ -31,6 +31,7 @@ export class MonitorScheduler {
     this.timer = null;
     this.cleanupTimer = null;
     this.running = false;
+    this.cycleStartedAt = null;
     this.state = {
       startedAt: null,
       lastRunAt: null,
@@ -98,10 +99,18 @@ export class MonitorScheduler {
 
   async runCycle() {
     if (this.running) {
-      logger.debug('Cycle skipped because previous cycle is still running');
-      return;
+      const elapsedMs = this.cycleStartedAt ? Date.now() - this.cycleStartedAt : 0;
+      const maxCycleDurationMs = Math.max(this.intervalMs * 4, 5 * 60 * 1000);
+      if (elapsedMs > maxCycleDurationMs) {
+        logger.warn('Cycle watchdog triggered: resetting stuck cycle', {elapsedMs});
+        this.running = false;
+      } else {
+        logger.debug('Cycle skipped because previous cycle is still running');
+        return;
+      }
     }
 
+    this.cycleStartedAt = Date.now();
     this.running = true;
     const started = Date.now();
     const activeSearches = this.searchRepository.listActive();
@@ -213,6 +222,7 @@ export class MonitorScheduler {
 
       this.state.lastError = cycleError;
     } finally {
+      this.cycleStartedAt = null;
       this.state.lastRunAt = nowIso();
       this.state.lastRunDurationMs = Date.now() - started;
       this.state.lastRunSearches = activeSearches.length;

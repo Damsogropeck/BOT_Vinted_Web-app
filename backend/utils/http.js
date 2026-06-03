@@ -57,9 +57,6 @@ export async function fetchText(url, options = {}) {
 
   let attempt = 0;
   while (attempt <= retries) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
       const response = await fetch(url, {
         method: 'GET',
@@ -68,7 +65,7 @@ export async function fetchText(url, options = {}) {
           ...DEFAULT_HEADERS,
           ...(options.headers ?? {}),
         },
-        signal: controller.signal,
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       if (!response.ok) {
@@ -97,8 +94,6 @@ export async function fetchText(url, options = {}) {
       const backoffMs = retryBaseDelayMs * (attempt + 1) + getRandomInt(50, 250);
       await sleep(backoffMs);
       attempt += 1;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
