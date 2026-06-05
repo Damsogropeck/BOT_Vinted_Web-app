@@ -145,6 +145,28 @@ export default function App() {
   }, [loadData]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    const to = params.get('to');
+    if (to) {
+      try {
+        const decoded = decodeURIComponent(to);
+        const parsed = new URL(decoded);
+        if (/^([a-z0-9-]+\.)*vinted\.[a-z]{2,}$/i.test(parsed.hostname)) {
+          window.open(decoded, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // URL invalide, on ignore
+      }
+    }
+
+    const searchParam = Number(params.get('search'));
+    if (Number.isFinite(searchParam) && searchParam > 0) {
+      setSelectedCategoryId(searchParam);
+    }
+  }, []);
+
+  useEffect(() => {
     if (openMenuId == null) {
       return;
     }

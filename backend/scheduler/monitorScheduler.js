@@ -185,7 +185,7 @@ export class MonitorScheduler {
                 const payload = {
                   title: `Nouveau ${search.label}`,
                   body: `${item.title} - ${item.price || 'Prix inconnu'}`,
-                  url: '/',
+                  url: `/?to=${encodeURIComponent(item.itemUrl)}&search=${search.id}`,
                   icon: item.imageUrl || '/icon-192.png',
                   image: item.imageUrl || undefined,
                 };
