@@ -45,9 +45,14 @@ export class MonitorScheduler {
 
   runCleanup() {
     try {
-      const deleted = this.itemRepository.deleteOlderThan(config.maxItemAgeDays);
-      if (deleted > 0) {
-        logger.info('Old items cleaned up', {deleted, maxAgeDays: config.maxItemAgeDays});
+      const deletedItems = this.itemRepository.deleteOlderThan(config.maxItemAgeDays);
+      const deletedSeen = this.itemRepository.pruneSeenItems(config.maxItemAgeDays * 2);
+      if (deletedItems > 0 || deletedSeen > 0) {
+        logger.info('Old data cleaned up', {
+          deletedItems,
+          deletedSeen,
+          maxAgeDays: config.maxItemAgeDays,
+        });
       }
     } catch (error) {
       logger.warn('Cleanup failed', {error: error.message});

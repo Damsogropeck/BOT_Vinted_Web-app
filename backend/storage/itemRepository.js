@@ -175,7 +175,7 @@ SELECT
   s.label AS search_label
 FROM items i
 LEFT JOIN searches s ON s.id = i.search_id
-ORDER BY datetime(i.detected_at) DESC, i.id ASC
+ORDER BY i.detected_at DESC, i.id ASC
 LIMIT ?
 `);
 
@@ -213,16 +213,24 @@ SELECT
   s.label AS search_label
 FROM items i
 LEFT JOIN searches s ON s.id = i.search_id
-WHERE i.search_id = ? AND datetime(i.detected_at) >= datetime(?)
+WHERE i.search_id = ? AND i.detected_at >= ?
 ORDER BY i.id ASC
 `);
 
 const countStmt = db.prepare('SELECT COUNT(*) AS total FROM items');
 
+const pruneItemsStmt = db.prepare('DELETE FROM items WHERE detected_at < ?');
+const pruneSeenItemsStmt = db.prepare('DELETE FROM seen_items WHERE first_seen_at < ?');
+
 export const itemRepository = {
   deleteOlderThan(days) {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
-    return db.prepare('DELETE FROM items WHERE detected_at < ?').run(cutoff).changes;
+    return pruneItemsStmt.run(cutoff).changes;
+  },
+
+  pruneSeenItems(days) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+    return pruneSeenItemsStmt.run(cutoff).changes;
   },
 
   insertNewItems(searchId, items, detectedAt) {

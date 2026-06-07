@@ -11,6 +11,8 @@ if (!fs.existsSync(dbDirectory)) {
 export const db = new Database(config.dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+db.pragma('cache_size = -4000');        // Limite le cache SQLite à ~4 MB
+db.pragma('wal_autocheckpoint = 100');  // Checkpoint WAL toutes les 100 pages (défaut : 1000)
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS searches (
